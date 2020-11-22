@@ -30,7 +30,7 @@ public class Yang_Robot extends AdvancedRobot{
     static int trainInterval = 2;
     static int testNumRounds = 0;
     static int testInterval = 2;
-    boolean flag = true;
+    static boolean flag = true;
     static int totalNumRounds = 0;
     static int numRoundsTo50 = 0;
     static int numWins = 0;
@@ -364,7 +364,7 @@ public class Yang_Robot extends AdvancedRobot{
                 flag = false;
             }
             else{
-                
+
             }
         }
 
