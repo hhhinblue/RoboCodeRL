@@ -27,12 +27,12 @@ public class Yang_Robot extends AdvancedRobot{
     private OperationMode operationMode = OperationMode.scan;
 
     static int trainNumRounds = 0;
-    static int trainInterval = 2;
+    static int trainInterval = 50;
     static int testNumRounds = 0;
-    static int testInterval = 2;
+    static int testInterval = 50;
     static boolean flag = true;
-    static int totalNumRounds = 0;
-    static int numRoundsTo50 = 0;
+//    static int totalNumRounds = 0;
+//    static int numRoundsTo50 = 0;
     static int numWins = 0;
     static double winningRate = 0.0;
 
@@ -95,7 +95,7 @@ public class Yang_Robot extends AdvancedRobot{
         }
 
         while(true){
-            epsilon = flag ? 1.0 : 0.0;
+            epsilon = flag ? 0.9 : 0.0;
 
             switch (operationMode){
                 case scan: {
@@ -107,10 +107,10 @@ public class Yang_Robot extends AdvancedRobot{
                     if (Math.random() <= epsilon)
                         currentAction = selectRandomAction();
                     else currentAction = selectBestAction(
-                            getEnergy(my_energy).ordinal(),
-                            getEnergy(enemy_energy).ordinal(),
-                            getDistance(enemy_Distance).ordinal(),
-                            getDistance(getDistanceToCenter(my_location_X, my_location_Y, xCenter, yCenter)).ordinal()
+                            my_energy,
+                            enemy_energy,
+                            enemy_Distance,
+                            getDistanceToCenter(my_location_X, my_location_Y, xCenter, yCenter)
                     );
 
                     switch (currentAction){
@@ -163,9 +163,8 @@ public class Yang_Robot extends AdvancedRobot{
                     };
                     if (flag){
                         LUT.setQValue(x, computeQ(reward, onPolicy));
-                        operationMode = OperationMode.scan;
                     }
-
+                    operationMode = OperationMode.scan;
                 }
             }
         }
@@ -205,12 +204,14 @@ public class Yang_Robot extends AdvancedRobot{
         int e1 = getEnergy(myEnergy).ordinal();
         int d1 = getEnergy(enemyEnergy).ordinal();
         int e2 = getDistance(enemyDistance).ordinal();
-        int d2 = getEnergy(centerDistance).ordinal();
+        int d2 = getDistance(centerDistance).ordinal();
 
         for (int i = 0; i < Action.values().length; i++){
             double[] x = new double[] {e1, d1, e2, d2, i};
-            if (LUT.getQValue(x) > maxReward)
+            if (LUT.getQValue(x) > maxReward){
+                maxReward = LUT.getQValue(x);
                 bestAction = Action.values()[i];
+            }
         }
         return bestAction;
     }
@@ -237,7 +238,8 @@ public class Yang_Robot extends AdvancedRobot{
     }
 
     public double computeQ(double reward, boolean onPolicy){
-        Action bestAction = selectBestAction(currentMyEnergy.ordinal(), currentEnemyEnergy.ordinal(), currentDistanceToEnemy.ordinal(), currentDistanceToCenter.ordinal());
+        Action bestAction = selectBestAction(my_energy, enemy_energy, enemy_Distance,
+                getDistanceToCenter(my_location_X, my_location_Y, xCenter, yCenter));
         double[] previousStateAction = new double[] {
                 previousMyEnergy.ordinal(),
                 previousEnemyEnergy.ordinal(),
@@ -270,31 +272,31 @@ public class Yang_Robot extends AdvancedRobot{
 
     @Override
     public void onBulletHit (BulletHitEvent e){
-        if (terminalRewardOnly == false)
+        if (terminalRewardOnly == false && flag == true)
             reward = instantReward;
     }
 
     @Override
     public void onHitByBullet (HitByBulletEvent e){
-        if (terminalRewardOnly == false)
+        if (terminalRewardOnly == false && flag == true)
             reward = instantPenalty;
     }
 
     @Override
     public void onBulletMissed (BulletMissedEvent e){
-        if (terminalRewardOnly == false)
+        if (terminalRewardOnly == false && flag == true)
             reward = instantPenalty;
     }
 
     @Override
     public void onHitRobot (HitRobotEvent e){
-        if (terminalRewardOnly == false)
+        if (terminalRewardOnly == false && flag == true)
             reward = instantPenalty;
     }
 
     @Override
     public void onHitWall (HitWallEvent e){
-        if (terminalRewardOnly == false)
+        if (terminalRewardOnly == false && flag == true)
             reward = instantPenalty;
     }
 
@@ -313,7 +315,7 @@ public class Yang_Robot extends AdvancedRobot{
             LUT.setQValue(x, computeQ(reward, onPolicy));
             updateTable();
             trainNumRounds ++;
-            System.out.println("training" + trainNumRounds);
+            System.out.println("training " + epsilon + " " + trainNumRounds);
             if (trainNumRounds == trainInterval){
                 trainNumRounds = 0;
                 flag = false;
@@ -322,22 +324,15 @@ public class Yang_Robot extends AdvancedRobot{
 
         else{
             testNumRounds++;
-            System.out.println("testing" + testNumRounds);
+            numWins += 1;
+            System.out.println("testing " + epsilon + " " + testNumRounds);
             if(testNumRounds == testInterval) {
-                testNumRounds = 0;
-                flag = true;
-            }
-            if (numRoundsTo50 < 50){
-                numRoundsTo50 += 1;
-                totalNumRounds += 1;
-                numWins += 1;
-            }
-            else {
-                winningRate = 100.0 * numWins / numRoundsTo50;
-                logFile.stream.printf("Winning rate: %2.1f\n ", winningRate);
+                winningRate = 100.0 * numWins / testInterval;
+                logFile.stream.printf("Testing Winning rate: %2.1f\n ", winningRate);
                 logFile.stream.flush();
-                numRoundsTo50 = 0;
+                testNumRounds = 0;
                 numWins = 0;
+                flag = true;
             }
         }
     }
@@ -356,38 +351,24 @@ public class Yang_Robot extends AdvancedRobot{
             };
             LUT.setQValue(x, computeQ(reward, onPolicy));
             updateTable();
-
             trainNumRounds ++;
-            System.out.println("training" + trainNumRounds);
+            System.out.println("training " + epsilon + " " + trainNumRounds);
             if (trainNumRounds == trainInterval){
                 trainNumRounds = 0;
                 flag = false;
-            }
-            else{
-
             }
         }
 
         else{
             testNumRounds++;
-            System.out.println("testing" + testNumRounds);
-            if (numRoundsTo50 < 50){
-                numRoundsTo50 += 1;
-                totalNumRounds += 1;
-            }
-            else{
-                winningRate = 100.0 * numWins / numRoundsTo50;
-                logFile.stream.printf("Winning rate: %2.1f\n ", winningRate);
-                logFile.stream.flush();
-                numRoundsTo50 = 0;
-                numWins = 0;
-            }
+            System.out.println("testing " + epsilon + " " + testNumRounds);
             if(testNumRounds == testInterval){
+                winningRate = 100.0 * numWins / testInterval;
+                logFile.stream.printf("Testing Winning rate: %2.1f\n ", winningRate);
+                logFile.stream.flush();
                 testNumRounds = 0;
+                numWins = 0;
                 flag = true;
-            }
-            else{
-
             }
         }
     }
@@ -410,5 +391,4 @@ public class Yang_Robot extends AdvancedRobot{
             System.out.println("Error is " + e);
         }
     }
-
 }
