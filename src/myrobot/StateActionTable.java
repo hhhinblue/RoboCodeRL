@@ -43,7 +43,7 @@ public class StateActionTable {
         }
     }
 
-    public double getQValue (double[] x) throws ArrayIndexOutOfBoundsException {
+    public double getQValue (int[] x) throws ArrayIndexOutOfBoundsException {
         if (x.length != 5){
             throw new ArrayIndexOutOfBoundsException();
         }
@@ -57,7 +57,7 @@ public class StateActionTable {
         }
     }
 
-    public void setQValue (double[] x, double target) throws ArrayIndexOutOfBoundsException {
+    public void setQValue (int[] x, double target) throws ArrayIndexOutOfBoundsException {
         if (x.length != 5){
             throw new ArrayIndexOutOfBoundsException();
         }

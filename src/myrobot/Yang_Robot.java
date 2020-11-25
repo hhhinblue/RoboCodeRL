@@ -7,7 +7,7 @@ import java.util.Random;
 
 public class Yang_Robot extends AdvancedRobot{
 
-    public enum Energy {zero, low, medium, high}
+    public enum Energy {low, medium, high}
     public enum Distance {veryClose, near, far}
     public enum OperationMode {scan, performAction}
     public enum Action {ahead, back, aheadLeft, aheadRight, backLeft, backRight, turnGunFire}
@@ -31,14 +31,14 @@ public class Yang_Robot extends AdvancedRobot{
     static int testNumRounds = 0;
     static int testInterval = 50;
     static boolean flag = true;
-//    static int totalNumRounds = 0;
+    //    static int totalNumRounds = 0;
 //    static int numRoundsTo50 = 0;
     static int numWins = 0;
     static double winningRate = 0.0;
 
     private double gamma = 0.75;
     private double alpha = 0.5;
-    private double epsilon;
+    private static double epsilon = 0.9;
 
     private double bestQ = 0.0;
     private double currentQ = 0.0;
@@ -56,6 +56,7 @@ public class Yang_Robot extends AdvancedRobot{
     private double my_location_X = 0.0;
     private double my_location_Y = 0.0;
     private double my_energy = 0.0;
+    private double centerDistance = 0.0;
 
     public double enemy_Bearing = 0.0;
     public double enemy_Distance = 0.0;
@@ -110,7 +111,7 @@ public class Yang_Robot extends AdvancedRobot{
                             my_energy,
                             enemy_energy,
                             enemy_Distance,
-                            getDistanceToCenter(my_location_X, my_location_Y, xCenter, yCenter)
+                            centerDistance
                     );
 
                     switch (currentAction){
@@ -154,7 +155,7 @@ public class Yang_Robot extends AdvancedRobot{
                             break;
                         }
                     }
-                    double[] x = new double[] {
+                    int[] x = new int[] {
                             previousMyEnergy.ordinal(),
                             previousEnemyEnergy.ordinal(),
                             previousDistanceToEnemy.ordinal(),
@@ -178,6 +179,7 @@ public class Yang_Robot extends AdvancedRobot{
         enemy_Bearing = e.getBearing();
         enemy_Distance = e.getDistance();
         enemy_energy = e.getEnergy();
+        centerDistance = getDistanceToCenter(my_location_X, my_location_Y, xCenter, yCenter);
 
         previousMyEnergy = currentMyEnergy;
         previousEnemyEnergy = currentEnemyEnergy;
@@ -188,7 +190,7 @@ public class Yang_Robot extends AdvancedRobot{
         currentMyEnergy = getEnergy(my_energy);
         currentEnemyEnergy = getEnergy(enemy_energy);
         currentDistanceToEnemy = getDistance(enemy_Distance);
-        currentDistanceToCenter = getDistance(getDistanceToCenter(my_location_X, my_location_Y, xCenter, yCenter));
+        currentDistanceToCenter = getDistance(centerDistance);
 
         operationMode = OperationMode.performAction;
     }
@@ -207,7 +209,7 @@ public class Yang_Robot extends AdvancedRobot{
         int d2 = getDistance(centerDistance).ordinal();
 
         for (int i = 0; i < Action.values().length; i++){
-            double[] x = new double[] {e1, d1, e2, d2, i};
+            int[] x = new int[] {e1, d1, e2, d2, i};
             if (LUT.getQValue(x) > maxReward){
                 maxReward = LUT.getQValue(x);
                 bestAction = Action.values()[i];
@@ -222,8 +224,7 @@ public class Yang_Robot extends AdvancedRobot{
 
     public Energy getEnergy (double energy){
         Energy enumEnergy = null;
-        if (energy == 0) enumEnergy = Energy.zero;
-        else if (energy <= 25.0) enumEnergy = Energy.low;
+        if (energy <= 25.0) enumEnergy = Energy.low;
         else if (25.0 < energy && energy < 50.0) enumEnergy = Energy.medium;
         else enumEnergy = Energy.high;
         return enumEnergy;
@@ -239,22 +240,22 @@ public class Yang_Robot extends AdvancedRobot{
 
     public double computeQ(double reward, boolean onPolicy){
         Action bestAction = selectBestAction(my_energy, enemy_energy, enemy_Distance,
-                getDistanceToCenter(my_location_X, my_location_Y, xCenter, yCenter));
-        double[] previousStateAction = new double[] {
+                centerDistance);
+        int[] previousStateAction = new int[] {
                 previousMyEnergy.ordinal(),
                 previousEnemyEnergy.ordinal(),
                 previousDistanceToEnemy.ordinal(),
                 previousDistanceToCenter.ordinal(),
                 previousAction.ordinal()
         };
-        double[] currentStateAction = new double[]{
+        int[] currentStateAction = new int[]{
                 currentMyEnergy.ordinal(),
                 currentEnemyEnergy.ordinal(),
                 currentDistanceToEnemy.ordinal(),
                 currentDistanceToCenter.ordinal(),
                 currentAction.ordinal()
         };
-        double [] bestStateAction = new double[]{
+        int [] bestStateAction = new int[]{
                 currentMyEnergy.ordinal(),
                 currentEnemyEnergy.ordinal(),
                 currentDistanceToEnemy.ordinal(),
@@ -305,7 +306,7 @@ public class Yang_Robot extends AdvancedRobot{
         System.out.println(flag);
         if (flag){
             reward = terminalReward;
-            double[] x = new double[] {
+            int[] x = new int[] {
                     previousMyEnergy.ordinal(),
                     previousEnemyEnergy.ordinal(),
                     previousDistanceToEnemy.ordinal(),
@@ -313,10 +314,10 @@ public class Yang_Robot extends AdvancedRobot{
                     previousAction.ordinal()
             };
             LUT.setQValue(x, computeQ(reward, onPolicy));
-            updateTable();
-            trainNumRounds ++;
+            trainNumRounds++;
             System.out.println("training " + epsilon + " " + trainNumRounds);
             if (trainNumRounds == trainInterval){
+                updateTable();
                 trainNumRounds = 0;
                 flag = false;
             }
@@ -325,7 +326,7 @@ public class Yang_Robot extends AdvancedRobot{
         else{
             testNumRounds++;
             numWins += 1;
-            System.out.println("testing " + epsilon + " " + testNumRounds);
+            System.out.println("testing " + epsilon + " " + testNumRounds + " " + numWins);
             if(testNumRounds == testInterval) {
                 winningRate = 100.0 * numWins / testInterval;
                 logFile.stream.printf("Testing Winning rate: %2.1f\n ", winningRate);
@@ -342,7 +343,7 @@ public class Yang_Robot extends AdvancedRobot{
         System.out.println(flag);
         if (flag) {
             reward = terminalPenalty;
-            double[] x = new double[]{
+            int[] x = new int[]{
                     previousMyEnergy.ordinal(),
                     previousEnemyEnergy.ordinal(),
                     previousDistanceToEnemy.ordinal(),
@@ -350,10 +351,10 @@ public class Yang_Robot extends AdvancedRobot{
                     previousAction.ordinal()
             };
             LUT.setQValue(x, computeQ(reward, onPolicy));
-            updateTable();
             trainNumRounds ++;
             System.out.println("training " + epsilon + " " + trainNumRounds);
             if (trainNumRounds == trainInterval){
+                updateTable();
                 trainNumRounds = 0;
                 flag = false;
             }
@@ -361,7 +362,7 @@ public class Yang_Robot extends AdvancedRobot{
 
         else{
             testNumRounds++;
-            System.out.println("testing " + epsilon + " " + testNumRounds);
+            System.out.println("testing " + epsilon + " " + testNumRounds + " " + numWins);
             if(testNumRounds == testInterval){
                 winningRate = 100.0 * numWins / testInterval;
                 logFile.stream.printf("Testing Winning rate: %2.1f\n ", winningRate);
