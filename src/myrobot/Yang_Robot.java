@@ -31,14 +31,15 @@ public class Yang_Robot extends AdvancedRobot{
     static int testNumRounds = 0;
     static int testInterval = 50;
     static boolean flag = true;
-    //    static int totalNumRounds = 0;
+//    static int totalNumRounds = 0;
 //    static int numRoundsTo50 = 0;
     static int numWins = 0;
     static double winningRate = 0.0;
 
     private double gamma = 0.75;
     private double alpha = 0.5;
-    private static double epsilon = 0.9;
+    final double trainingEpsilon = 0.9;
+    private static double currentEpsilon;
 
     private double bestQ = 0.0;
     private double currentQ = 0.0;
@@ -88,7 +89,7 @@ public class Yang_Robot extends AdvancedRobot{
             logFile = new LogFile(getDataFile("log.dat"));
             logFile.stream.printf("gamma,   %2.2f\n", gamma);
             logFile.stream.printf("alpha,   %2.2f\n", alpha);
-            logFile.stream.printf("epsilon, %2.2f\n", epsilon);
+            logFile.stream.printf("epsilon, %2.2f\n", currentEpsilon);
             logFile.stream.printf("badInstantReward, %2.2f\n", instantPenalty);
             logFile.stream.printf("badTerminalReward, %2.2f\n", terminalPenalty);
             logFile.stream.printf("goodInstantReward, %2.2f\n", instantReward);
@@ -96,7 +97,7 @@ public class Yang_Robot extends AdvancedRobot{
         }
 
         while(true){
-            epsilon = flag ? 0.9 : 0.0;
+            currentEpsilon = flag ? trainingEpsilon : 0.0;
 
             switch (operationMode){
                 case scan: {
@@ -105,7 +106,7 @@ public class Yang_Robot extends AdvancedRobot{
                     break;
                 }
                 case performAction: {
-                    if (Math.random() <= epsilon)
+                    if (Math.random() <= currentEpsilon)
                         currentAction = selectRandomAction();
                     else currentAction = selectBestAction(
                             my_energy,
@@ -315,7 +316,7 @@ public class Yang_Robot extends AdvancedRobot{
             };
             LUT.setQValue(x, computeQ(reward, onPolicy));
             trainNumRounds++;
-            System.out.println("training " + epsilon + " " + trainNumRounds);
+            System.out.println("training " + currentEpsilon + " " + trainNumRounds);
             if (trainNumRounds == trainInterval){
                 updateTable();
                 trainNumRounds = 0;
@@ -326,7 +327,7 @@ public class Yang_Robot extends AdvancedRobot{
         else{
             testNumRounds++;
             numWins += 1;
-            System.out.println("testing " + epsilon + " " + testNumRounds + " " + numWins);
+            System.out.println("testing " + currentEpsilon + " " + testNumRounds + " " + numWins);
             if(testNumRounds == testInterval) {
                 winningRate = 100.0 * numWins / testInterval;
                 logFile.stream.printf("Testing Winning rate: %2.1f\n ", winningRate);
@@ -352,7 +353,7 @@ public class Yang_Robot extends AdvancedRobot{
             };
             LUT.setQValue(x, computeQ(reward, onPolicy));
             trainNumRounds ++;
-            System.out.println("training " + epsilon + " " + trainNumRounds);
+            System.out.println("training " + currentEpsilon + " " + trainNumRounds);
             if (trainNumRounds == trainInterval){
                 updateTable();
                 trainNumRounds = 0;
@@ -362,7 +363,7 @@ public class Yang_Robot extends AdvancedRobot{
 
         else{
             testNumRounds++;
-            System.out.println("testing " + epsilon + " " + testNumRounds + " " + numWins);
+            System.out.println("testing " + currentEpsilon + " " + testNumRounds + " " + numWins);
             if(testNumRounds == testInterval){
                 winningRate = 100.0 * numWins / testInterval;
                 logFile.stream.printf("Testing Winning rate: %2.1f\n ", winningRate);
